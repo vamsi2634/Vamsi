@@ -1,0 +1,18 @@
+
+
+CREATE COMPUTE MODULE DateFormating_MF_Compute
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+	
+	DECLARE currentDate TIME CURRENT_TIME ;
+	
+	DECLARE pattern CHARACTER InputLocalEnvironment.HTTP.Input.QueryString.pattern ;
+	
+	SET OutputRoot.JSON.Data.FormateedDate = CAST(currentDate AS CHARACTER FORMAT pattern);
+	
+	
+		RETURN TRUE;
+	END;
+
+
+END MODULE;
