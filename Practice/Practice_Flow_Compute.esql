@@ -1,0 +1,96 @@
+
+
+CREATE COMPUTE MODULE Practice_Flow_Compute
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		-- CALL CopyMessageHeaders();
+		 CALL CopyEntireMessage();
+		RETURN TRUE;
+	END;
+
+	CREATE PROCEDURE CopyMessageHeaders() BEGIN
+		DECLARE I INTEGER 1;
+		DECLARE J INTEGER;
+		SET J = CARDINALITY(InputRoot.*[]);
+		WHILE I < J DO
+			SET OutputRoot.*[I] = InputRoot.*[I];
+			SET I = I + 1;
+		END WHILE;
+	END;
+
+	CREATE PROCEDURE CopyEntireMessage() BEGIN
+		DECLARE InputRef REFERENCE TO InputRoot.JSON.Data;
+		INSERT INTO DataSource.ACC_DETAILS VALUES (InputRef.USER_ID,InputRef.FIRST_NAME,InputRef.LAST_NAME,InputRef.MOBILE_NO,InputRef.PAN_NO,InputRef.AADHAR_NO,InputRef.MAIL_ID,InputRef.ADDRESS );
+		DECLARE vd,table CHARACTER;
+		SET table = 'SELECT ACC_DETAILS.USER_ID FROM ACC_DETAILS INNER JOIN SBI_ACCOUNT ON ACC_DETAILS.USER_ID=SBI_ACCOUNT.USER_ID WHERE ACC_DETAILS.USER_ID=?';
+		SET Environment.Customer.ID=PASSTHRU(table VALUES(InputRef.USER_ID));
+        DECLARE AccountNumber CHARACTER;
+	    DECLARE ACCOUNT_NUMBER CHARACTER;
+		DECLARE CUSTOMER_ID INTEGER;
+		DECLARE IFSC CHARACTER;
+		DECLARE BRANCH CHARACTER;
+		DECLARE query CHARACTER;
+		
+		SET IFSC = 'ESIH846578';
+		SET BRANCH = 'hyderabad';
+		SET CUSTOMER_ID = RAND()*1000000000;
+		SET AccountNumber = RAND();
+		SET ACCOUNT_NUMBER = SUBSTRING(AccountNumber FROM 3 FOR 12);
+
+		
+		 --INSERT INTO DataSource.SBI_ACCOUNT VALUES (ACC_NO,CUSTOMER_ID,IFSC,BRANCH) WHERE USER_ID = InputRef.USER_ID;
+	   SET query='UPDATE SBI_ACCOUNT SET ACC_NO =?, CUSTOMER_ID= ?,IFSC = ? ,BRANCH = ?  WHERE USER_ID = ?';
+	    SET Environment.Data.Result= PASSTHRU(query VALUES(ACCOUNT_NUMBER,CUSTOMER_ID,IFSC,BRANCH,Environment.Customer.ID.USER_ID));
+		SET OutputRoot.JSON.Data.ACC_NUMBER = ACCOUNT_NUMBER;
+		SET OutputRoot.JSON.Data.IFSC = IFSC;
+		SET OutputRoot.JSON.Data.BRANCH = BRANCH;
+		SET OutputRoot.JSON.Data.CUSTOMER_ID = CUSTOMER_ID;
+		
+		
+		DECLARE tab1 CHARACTER;
+		DECLARE tab2 CHARACTER;
+--	DECLARE mail CHARACTER;
+	SET Environment.mail = InputRef.MAIL_ID;
+	
+	
+	SET tab1='SELECT PAN_NO FROM ACC_DETAILS WHERE PAN_NO=?';
+	SET tab2='SELECT AADHAR_NO FROM ACC_DETAILS WHERE AADHAR_NO=?';
+	SET Environment.USER_DATA=PASSTHRU(tab1 VALUES(InputRef.PAN_NO));
+	SET Environment.USER_DATA1=PASSTHRU(tab2 VALUES(InputRef.AADHAR_NO));
+	
+	IF FIELDVALUE(InputRoot.JSON.Data.PAN_NO)=Environment.USER_DATA.PAN_NO THEN
+		
+		SET OutputRoot.JSON.Data.Result=InputRef.FIRST_NAME || InputRef.LAST_NAME||' already exist';
+		
+	ELSEIF FIELDVALUE(InputRoot.JSON.Data.AADHAR_NO)=Environment.USER_DATA1.AADHAR_NO THEN
+		
+		SET OutputRoot.JSON.Data.Result=InputRef.FIRST_NAME || InputRef.LAST_NAME||' already exist';
+	ELSE	
+        INSERT INTO DataSource.ACC_DETAILS VALUES (InputRef.USER_ID,InputRef.FIRST_NAME,InputRef.LAST_NAME,InputRef.MOBILE_NO,InputRef.PAN_NO,InputRef.AADHAR_NO,InputRef.MAIL_ID,InputRef.ADDRESS );
+		
+	END IF;
+		
+		 
+		DECLARE blobdata BLOB ASBITSTREAM(InputRoot.JSON.Data CCSID InputRoot.Properties.CodedCharSetId ENCODING InputRoot.Properties.Encoding);
+        DECLARE Request CHARACTER CAST(blobdata AS CHARACTER CCSID InputRoot.Properties.CodedCharSetId ENCODING InputRoot.Properties.Encoding);
+		DECLARE blobdata1 BLOB ASBITSTREAM(OutputRoot.JSON.Data CCSID InputRoot.Properties.CodedCharSetId ENCODING InputRoot.Properties.Encoding);
+		DECLARE Response CHARACTER CAST(blobdata1 AS CHARACTER CCSID InputRoot.Properties.CodedCharSetId ENCODING InputRoot.Properties.Encoding);
+		DECLARE type INTEGER;
+		DECLARE text CHARACTER;
+		DECLARE ref REFERENCE TO InputExceptionList.*[<];
+		WHILE ENDSWITH(FIELDNAME(ref),'Exception') DO			
+				SET type = ref.Insert[<].Type;
+				SET text = ref.Insert[<].Text;
+			MOVE ref LASTCHILD;
+		END WHILE;
+		CALL log1(ApplicationLabel,NodeLabel,Request,Response,type,text);	
+		 
+		--SET OutputRoot = InputRoot;
+	END;
+END MODULE;
+CREATE PROCEDURE log1 (IN APPLICATION_NAME CHARACTER,IN NODE CHARACTER,IN REQUEST CHARACTER,IN RESPONSE CHARACTER,IN EXCEPTION_TYPE CHARACTER,IN EXCEPTION_TEXT CHARACTER)
+LANGUAGE DATABASE
+EXTERNAL NAME "DB_LOGGING";
+
+
+

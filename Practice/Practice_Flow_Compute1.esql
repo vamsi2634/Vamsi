@@ -1,0 +1,34 @@
+
+
+CREATE COMPUTE MODULE Practice_Flow_Compute1
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		
+				-- Add recipient information to the EmailOutputHeader
+				--DECLARE custmer_email CHARACTER;
+				--SET custmer_email = Environment.mail;
+		SET OutputRoot.EmailOutputHeader.To = Environment.mail;
+		--SET OutputRoot.EmailOutputHeader.Cc = 'mukeshkumar.eidiko@gmail.com';
+		--SET OutputRoot.EmailOutputHeader.Bcc = 'umeshlohare49@gmail.com';
+
+		-- Add sender information to EmailOutputHeader
+		--SET OutputRoot.EmailOutputHeader.From = 'umesh.lohar@eidiko-india.com';
+		--SET OutputRoot.EmailOutputHeader."Reply-To" = '<reply email address>';
+
+		-- Add subject to EmailOutputHeader
+		SET OutputRoot.EmailOutputHeader.Subject = 'accout genearted succefully';
+
+		-- Add SMTP server information to the LocalEnvironment
+		--SET OutputLocalEnvironment.Destination.Email.SMTPServer ='smtp.gmail.com:587';
+		 SET OutputRoot.BLOB.BLOB = CAST(InputRoot.EmailData.Body AS BLOB CCSID 1208);  
+
+		-- Create a new message body, which will be sent as the main text of the email.
+		SET OutputRoot.XMLNSC.Data.Account.STATUS = InputRoot.JSON.Data.STATUS;
+		SET OutputRoot.XMLNSC.Data.Account.CustomerId = InputRoot.JSON.Data.CUSTOMER_ID;
+		SET OutputRoot.XMLNSC.Data.Account.AccountNumber = InputRoot.JSON.Data.ACCOUNT_NUMBER;
+		SET OutputRoot.XMLNSC.Data.Account.IFSC = InputRoot.JSON.Data.IFSC;
+		SET OutputRoot.XMLNSC.Data.Account.BRANCH = InputRoot.JSON.Data.BRANCH;
+		--SET OutputRoot = InputRoot;
+		RETURN TRUE;
+	END;
+END MODULE;
